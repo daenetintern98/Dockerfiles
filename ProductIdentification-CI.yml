@@ -1,0 +1,95 @@
+# Variable 'instanceindex' was defined in the Variables tab
+# Variable 'location' was defined in the Variables tab
+# Variable 'rg' was defined in the Variables tab
+resources:
+  repositories:
+  - repository: self
+    type: git
+    ref: refs/heads/main
+jobs:
+- job: Job_1
+  displayName: Agent job 1
+  pool:
+    vmImage: windows-2019
+  steps:
+  - checkout: self
+    clean: true
+  - task: AzureCLI@2
+    displayName: Create Resource Group
+    inputs:
+      connectedServiceNameARM: 37cf1247-0448-422d-a0e0-d8237e83b38c
+      scriptType: pscore
+      scriptLocation: inlineScript
+      inlineScript: >-
+        Write-Output "------------------------------------"
+
+        Write-Output "     create resource group   "
+
+        Write-Output "------------------------------------"
+
+
+
+        az group create -n $(rg) -l $(location)
+  - task: AzureCLI@2
+    displayName: Create Registry Container
+    inputs:
+      connectedServiceNameARM: 37cf1247-0448-422d-a0e0-d8237e83b38c
+      scriptType: pscore
+      scriptLocation: inlineScript
+      inlineScript: "Write-Output \"------------------------------------\"\nWrite-Output \"     create registry container   \"\nWrite-Output \"------------------------------------\"\n\n$regname = 'dev$(instanceindex)registry'\n\naz acr create --name $regname -g $(rg) --sku Basic --admin-enabled true "
+  - task: AzureCLI@2
+    displayName: Create Database
+    inputs:
+      connectedServiceNameARM: 37cf1247-0448-422d-a0e0-d8237e83b38c
+      scriptType: pscore
+      scriptLocation: inlineScript
+      inlineScript: >-
+        Write-Output "------------------------------------"
+
+        Write-Output "     create resource group   "
+
+        Write-Output "------------------------------------"
+
+
+        $servername = 'dev$(instanceindex)database'
+
+        $admin = 'admin$(instanceindex)'
+
+        $pass =   'password$(instanceindex)!@#98'
+
+
+
+        az sql server create --name $servername -g $(rg)  -l $(location) --admin-user $admin --admin-password $pass
+
+
+
+        Write-Output "------------------------------------"
+
+        Write-Output "     create resource group   "
+
+        Write-Output "------------------------------------"
+
+
+        $database = 'database$(instanceindex)'
+
+
+        az sql db create -g $(rg) --server $servername --name $database --sample-name AdventureWorksLT --edition GeneralPurpose --family Gen5 --capacity 2
+  - task: AzureCLI@2
+    displayName: 'Create AppService Plan '
+    inputs:
+      connectedServiceNameARM: 37cf1247-0448-422d-a0e0-d8237e83b38c
+      scriptType: pscore
+      scriptLocation: inlineScript
+      inlineScript: >-
+        $planname = 'plan-linux-$(instanceindex)'
+
+
+        Write-Output "------------------------------------"
+
+        Write-Output "     Create APP Plan "
+
+        Write-Output "------------------------------------"
+
+
+        az appservice plan create -g $(rg) -n $planname --number-of-workers 1 --sku S1 --is-linux
+...
